@@ -229,6 +229,7 @@ namespace PredPreySim
     }
     public class Prey : Thing
     {
+        int spawnCooldown;
         public Prey(double newSize, double newX, double newY) : base(newSize, newX, newY)
         {
             brush.Color = Colors.Blue;
