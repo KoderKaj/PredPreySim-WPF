@@ -73,30 +73,35 @@ namespace PredPreySim
                     target.SetPred((Predator)thing);
                 }
             }
-            Predator p;
+            Predator prdtr; Prey p;
             foreach(Thing t in things)
             {
                 if (t.GetType() == typeof(Predator))
                 {
-                    p = (Predator)t;
-                    if (p.GetCollision())
+                    prdtr = (Predator)t;
+                    if (prdtr.GetCollision())
                     {
                         thingsToRem.Add(p.GetTarget());
-                        p.ResetTtl();
-                        p.OffCollision();
+                        prdtr.ResetTtl();
+                        prdtr.OffCollision();
                     }
-                    if (p.GetTtl() <= 0)
+                    if (prdtr.GetTtl() <= 0)
                     {
                         thingsToRem.Add(p);
                     }
                 }
                 else
                 {
-                    if (t.GetCollision())
+                    p = (Prey)t;
+                    if (p.GetCollision())
                     {
-                        double newX = (t.GetX() + t.GetTarget().GetX())/2;
-                        double newY = (t.GetY() + t.GetTarget().GetY()) / 2;
-                        thingsToAdd.Add(new Prey(t.GetSize(),newX, newY));
+                        if (p.GetCooldown() <= 0)
+                        {
+                            double newX = (p.GetX() + p.GetTarget().GetX()) / 2;
+                            double newY = (p.GetY() + p.GetTarget().GetY()) / 2;
+                            thingsToAdd.Add(new Prey(p.GetSize(), newX, newY));
+                        }
+                        t.OffCollision();
                     }
                 }
             }
@@ -274,6 +279,10 @@ namespace PredPreySim
                 }
                 else { predator.OnCollision(); }
             }
+            if (spawnCooldown > 0)
+            {
+                spawnCooldown--;
+            }
         }
         public double[] MagCalc(Thing t)
         {
@@ -288,6 +297,14 @@ namespace PredPreySim
             {
                 return new double[3] { double.MaxValue, 0, 0 }; //Some sort of inexplicable error has ooccured so Im returning max magnitude.
             }
+        }
+        public int GetCooldown()
+        {
+            return spawnCooldown;
+        }
+        public void SetSpawnCooldown()
+        {
+
         }
     }
 }
