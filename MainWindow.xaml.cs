@@ -49,32 +49,41 @@ namespace PredPreySim
             t.Elapsed += TimerEvent;
             t.Enabled = true;
         }
-        private void TimerEvent(Object source, ElapsedEventArgs e)
+        private void SetTargets()
         {
-            bool isPred;
-            Prey target = null, prey;
-            foreach(Thing thing in things)
+            double minMag;
+            Prey tempPrey = null;
+            bool isPrey1, isPrey2;
+            Predator tempPred = null;
+            foreach(Thing thing1 in things)
             {
-                double minMag = double.PositiveInfinity;
-                isPred = thing.GetType() == typeof(Predator);
-                foreach (Thing thing2 in things)
+                minMag = double.PositiveInfinity;
+                isPrey1 = thing1.GetType() == typeof(Prey);
+                foreach(Thing thing2 in things)
                 {
-                    if (thing2.GetType() == typeof(Prey) && thing != thing2)
+                    isPrey2 = thing2.GetType() == typeof(Prey);
+                    if (thing1 != thing2)
                     {
-                        prey = (Prey)thing2;
-                        if (prey.MagCalc(thing)[0] < minMag)
+                        if (thing1.MagCalc(thing2)[0] < minMag)
                         {
-                            minMag = prey.MagCalc(thing)[0];
-                            target = prey;
+                            if (isPrey2)
+                            {
+                                tempPrey = (Prey)thing2;
+                            }
+                            else if (isPrey1)//(and thing2 is a predator)
+                            {
+                                tempPred = (Predator)thing2;
+                            }
                         }
                     }
                 }
-                thing.Target = target;
-                if (isPred)
-                {
-                    target.SetPred((Predator)thing);
-                }
+                thing1.Target = tempPrey;
+                if (isPrey1) { ((Prey)thing1).Pred = tempPred; }
             }
+        }
+        private void TimerEvent(Object source, ElapsedEventArgs e)
+        {
+            SetTargets();
             Predator prdtr; Prey p;
             foreach(Thing t in things)
             {
@@ -112,10 +121,10 @@ namespace PredPreySim
                 foreach (Thing t in thingsToRem)
                 {
                     things.Remove(t);
-                    /*Application.Current.Dispatcher.Invoke(() =>
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        canvas.Children.Remove(t.Shape); Not removing from canvas to see if issue still continues.
-                    });*/
+                        canvas.Children.Remove(t.Shape); 
+                    });
                 }
                 thingsToRem.Clear();
             }
@@ -176,6 +185,20 @@ namespace PredPreySim
             ChangeXY();
             return new TranslateTransform(x, y);
         }
+        public double[] MagCalc(Thing t)
+        {
+            try
+            {
+                double diffX = t.X - x;
+                double diffY = y - t.Y;
+                double magnitude = (double)Math.Sqrt(diffX * diffX + diffY * diffY);
+                return new double[3] { magnitude, diffX, diffY };
+            }
+            catch
+            {
+                return new double[3] { double.MaxValue, 0, 0 }; //Some sort of inexplicable error has occured so Im returning max magnitude.
+            }
+        }
     }
     public class Predator : Thing
     {
@@ -223,10 +246,7 @@ namespace PredPreySim
             speed = 2;
         }
         private Predator predator;
-        public void SetPred(Predator p)
-        {
-            predator = p;
-        }
+        public Predator Pred { set { predator = value; } }
         protected override void ChangeXY()
         {
             double[] predVals = MagCalc(predator);//magnitude, diffX, diffY
@@ -263,20 +283,6 @@ namespace PredPreySim
             {
                 spawnCooldown--;
             }*/
-        }
-        public double[] MagCalc(Thing t)
-        {
-            try
-            {
-                double diffX = t.X - x;
-                double diffY = y - t.Y;
-                double magnitude = (double)Math.Sqrt(diffX * diffX + diffY * diffY);
-                return new double[3] { magnitude, diffX, diffY };
-            }
-            catch
-            {
-                return new double[3] { double.MaxValue, 0, 0 }; //Some sort of inexplicable error has ooccured so Im returning max magnitude.
-            }
         }
         /*public int GetCooldown()
         {
