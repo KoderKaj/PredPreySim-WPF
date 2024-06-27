@@ -22,15 +22,25 @@ namespace PredPreySim
     /// </summary>
     public partial class MainWindow : Window
     {
-        Timer t;
+        Timer t; Random r = new Random();                       
         List<Thing> things = new List<Thing> (), thingsToAdd = new List<Thing>(), thingsToRem = new List<Thing>();
         public MainWindow()
         {
             InitializeComponent();
-            Predator tempPred = new Predator(40, 0, 50);
-            AddThing(tempPred);
-            AddThing(new Prey(40, 500, 60));
-            AddThing(new Prey(40, 250, 80));
+            double maxX = Width, maxY = Height,x,y;
+            for(int i = 0; i < r.Next(15, 20); i++)
+            {
+                x = r.NextDouble()*maxX;
+                y = r.NextDouble()*maxY;
+                if (r.Next(0, 3) <= 1)
+                {
+                    AddThing(new Prey(20, x, y));
+                }
+                else
+                {
+                    AddThing(new Predator(20, x, y));
+                }
+            }
             SetTimers();
         }
         private void SetTimers()
@@ -38,14 +48,6 @@ namespace PredPreySim
             t = new Timer(100);
             t.Elapsed += TimerEvent;
             t.Enabled = true;
-        }
-        private double GetX(Ellipse e)
-        {
-            return (Canvas.GetRight(e) + Canvas.GetLeft(e))/2;
-        }
-        private double GetY(Ellipse e)
-        {
-            return (Canvas.GetTop(e) + Canvas.GetBottom(e)) / 2;
         }
         private void TimerEvent(Object source, ElapsedEventArgs e)
         {
@@ -67,7 +69,7 @@ namespace PredPreySim
                         }
                     }
                 }
-                thing.SetTarget(target);
+                thing.Target = target;
                 if (isPred)
                 {
                     target.SetPred((Predator)thing);
@@ -81,13 +83,13 @@ namespace PredPreySim
                     prdtr = (Predator)t;
                     if (prdtr.GetCollision())
                     {
-                        thingsToRem.Add(p.GetTarget());
+                        thingsToRem.Add(prdtr.Target);
                         prdtr.ResetTtl();
                         prdtr.OffCollision();
                     }
                     if (prdtr.GetTtl() <= 0)
                     {
-                        thingsToRem.Add(p);
+                        thingsToRem.Add(prdtr);
                     }
                 }
                 else
@@ -97,9 +99,9 @@ namespace PredPreySim
                     {
                         if (p.GetCooldown() <= 0)
                         {
-                            double newX = (p.GetX() + p.GetTarget().GetX()) / 2;
-                            double newY = (p.GetY() + p.GetTarget().GetY()) / 2;
-                            thingsToAdd.Add(new Prey(p.GetSize(), newX, newY));
+                            double newX = (p.X + p.Target.X) / 2;
+                            double newY = (p.Y + p.Target.Y) / 2;
+                            thingsToAdd.Add(new Prey(p.Size, newX, newY));
                         }
                         t.OffCollision();
                     }
@@ -112,7 +114,7 @@ namespace PredPreySim
                     things.Remove(t);
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        canvas.Children.Remove(t.GetShape());
+                        canvas.Children.Remove(t.Shape);
                     });
                 }
                 thingsToRem.Clear();
@@ -129,14 +131,14 @@ namespace PredPreySim
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    t.GetShape().RenderTransform = t.Move();
+                    t.Shape.RenderTransform = t.Move();
                 });
             }
         }
         private void AddThing(Thing thing)
         {
             things.Add(thing);
-            canvas.Children.Add(thing.GetShape());
+            canvas.Children.Add(thing.Shape);
         }
     }
     public abstract class Thing
@@ -146,6 +148,16 @@ namespace PredPreySim
         protected Ellipse shape = new Ellipse();
         protected Prey target;
         protected bool closeToPrey = false;
+
+        public Ellipse Shape { get { return shape; } }
+        public double Size { get { return size; } }
+        public double X { get { return x; } }
+        public double Y { get { return x; } }
+        protected abstract void ChangeXY();
+        public void OnCollision() { closeToPrey = true; }
+        public void OffCollision() { closeToPrey = false; }
+        public bool GetCollision() { return closeToPrey; }
+
         public Thing(double newSize, double newX, double newY)
         {
             size = newSize;
@@ -154,47 +166,15 @@ namespace PredPreySim
             shape.Height = size;
             shape.Width = size;
         }
+        public Prey Target
+        {
+            get { return target; }
+            set { target = value; }
+        }
         public TranslateTransform Move()
         {
             ChangeXY();
             return new TranslateTransform(x, y);
-        }
-        public Ellipse GetShape()
-        {
-            return shape;
-        }
-        public double GetSize()
-        {
-            return size;
-        }
-        public double GetX()
-        {
-            return x;
-        }
-        public double GetY()
-        {
-            return y;
-        }
-        public void SetTarget(Prey closest)
-        {
-            target = closest;
-        }
-        public Prey GetTarget()
-        {
-            return target;
-        }
-        protected abstract void ChangeXY();
-        public void OnCollision()
-        {
-            closeToPrey = true;
-        }
-        public void OffCollision()
-        {
-            closeToPrey = false;
-        }
-        public bool GetCollision()
-        {
-            return closeToPrey;
         }
     }
     public class Predator : Thing
@@ -204,14 +184,14 @@ namespace PredPreySim
         {
             brush.Color = Colors.Red;
             shape.Fill = brush;
-            minDist = 50;
+            minDist = 20;
             speed = 3;
-            ttl = 50;
+            ttl = 100;
         }
         protected override void ChangeXY()
         {
-            double diffX = target.GetX() - x;
-            double diffY = y - target.GetY();
+            double diffX = target.X - x;
+            double diffY = y - target.Y;
             double magnitude = (double)Math.Sqrt(diffX * diffX + diffY * diffY);
             if (magnitude > minDist)
             {
@@ -279,17 +259,17 @@ namespace PredPreySim
                 }
                 else { predator.OnCollision(); }
             }
-            if (spawnCooldown > 0)
+            /*if (spawnCooldown > 0)
             {
                 spawnCooldown--;
-            }
+            }*/
         }
         public double[] MagCalc(Thing t)
         {
             try
             {
-                double diffX = t.GetX() - x;
-                double diffY = y - t.GetY();
+                double diffX = t.X - x;
+                double diffY = y - t.Y;
                 double magnitude = (double)Math.Sqrt(diffX * diffX + diffY * diffY);
                 return new double[3] { magnitude, diffX, diffY };
             }
