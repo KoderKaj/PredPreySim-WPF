@@ -49,6 +49,10 @@ namespace PredPreySim
             t.Elapsed += TimerEvent;
             t.Enabled = true;
         }
+        private bool IsPrey(Thing t)
+        {
+            return t.GetType() == typeof(Prey);
+        }
         private void SetTargets()
         {
             double minMag;
@@ -58,10 +62,10 @@ namespace PredPreySim
             foreach(Thing thing1 in things)
             {
                 minMag = double.PositiveInfinity;
-                isPrey1 = thing1.GetType() == typeof(Prey);
+                isPrey1 = IsPrey(thing1);
                 foreach(Thing thing2 in things)
                 {
-                    isPrey2 = thing2.GetType() == typeof(Prey);
+                    isPrey2 = IsPrey(thing2);
                     if (thing1 != thing2)
                     {
                         if (thing1.MagCalc(thing2)[0] < minMag)
@@ -81,41 +85,31 @@ namespace PredPreySim
                 if (isPrey1) { ((Prey)thing1).Pred = tempPred; }
             }
         }
-        private void TimerEvent(Object source, ElapsedEventArgs e)
+        private void CheckCollisions()
         {
-            SetTargets();
-            Predator prdtr; Prey p;
-            foreach(Thing t in things)
+            bool isPrey;
+            foreach (Thing t in things)
             {
-                if (t.GetType() == typeof(Predator))
+                isPrey = IsPrey(t);
+                if (t.GetCollision()&&(!isPrey||((Prey)t).GetCooldown() <= 0))
                 {
-                    prdtr = (Predator)t;
-                    if (prdtr.GetCollision())
+                    double newX = (t.X + t.Target.X) / 2;
+                    double newY = (t.Y + t.Target.Y) / 2;
+                    thingsToAdd.Add(new Prey(t.Size, newX, newY));
+                    if (!isPrey)
                     {
-                        thingsToRem.Add(prdtr.Target);
-                        prdtr.ResetTtl();
-                        prdtr.OffCollision();
-                    }
-                    if (prdtr.GetTtl() <= 0)
-                    {
-                        thingsToRem.Add(prdtr);
-                    }
-                }
-                else
-                {
-                    p = (Prey)t;
-                    if (p.GetCollision())
-                    {
-                        if (true)//p.GetCooldown() <= 0)
+                        thingsToRem.Add(t.Target);
+                        if(((Predator)t).GetTtl() <= 0)
                         {
-                            double newX = (p.X + p.Target.X) / 2;
-                            double newY = (p.Y + p.Target.Y) / 2;
-                            thingsToAdd.Add(new Prey(p.Size, newX, newY));
+                            thingsToRem.Add(t);
                         }
-                        t.OffCollision();
                     }
+                    t.OffCollision();
                 }
             }
+        }
+        private void RemoveStuff()
+        {
             if (thingsToRem.Count > 0)
             {
                 foreach (Thing t in thingsToRem)
@@ -123,19 +117,29 @@ namespace PredPreySim
                     things.Remove(t);
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        canvas.Children.Remove(t.Shape); 
+                        canvas.Children.Remove(t.Shape);
                     });
                 }
                 thingsToRem.Clear();
             }
+        }
+        private void AddStuff()
+        {
             if(thingsToAdd.Count > 0)
             {
-                foreach(Thing thing in thingsToAdd)
+                foreach(Thing t in thingsToAdd)
                 {
-                    AddThing(thing);
+                    AddThing(t);
                 }
                 thingsToAdd.Clear();
             }
+        }
+        private void TimerEvent(Object source, ElapsedEventArgs e)
+        {
+            SetTargets();
+            CheckCollisions();
+            AddStuff();
+            RemoveStuff();
             foreach(Thing t in things)
             {
                 Application.Current.Dispatcher.Invoke(() =>
@@ -237,13 +241,14 @@ namespace PredPreySim
     }
     public class Prey : Thing
     {
-        //int spawnCooldown;
+        int spawnCooldown;
         public Prey(double newSize, double newX, double newY) : base(newSize, newX, newY)
         {
             brush.Color = Colors.Blue;
             shape.Fill = brush;
             minDist = 40;
             speed = 2;
+            spawnCooldown = 10;
         }
         private Predator predator;
         public Predator Pred { set { predator = value; } }
@@ -279,18 +284,18 @@ namespace PredPreySim
                 }
                 else { predator.OnCollision(); }
             }
-            /*if (spawnCooldown > 0)
+            if (spawnCooldown > 0)
             {
                 spawnCooldown--;
-            }*/
+            }
         }
-        /*public int GetCooldown()
+        public int GetCooldown()
         {
             return spawnCooldown;
-        }*/
+        }
         public void SetSpawnCooldown()
         {
-
+            spawnCooldown =15;
         }
     }
 }
