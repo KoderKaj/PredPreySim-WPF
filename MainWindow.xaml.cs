@@ -97,7 +97,7 @@ namespace PredPreySim
                     p = (Prey)t;
                     if (p.GetCollision())
                     {
-                        if (p.GetCooldown() <= 0)
+                        if (true)//p.GetCooldown() <= 0)
                         {
                             double newX = (p.X + p.Target.X) / 2;
                             double newY = (p.Y + p.Target.Y) / 2;
@@ -112,10 +112,10 @@ namespace PredPreySim
                 foreach (Thing t in thingsToRem)
                 {
                     things.Remove(t);
-                    Application.Current.Dispatcher.Invoke(() =>
+                    /*Application.Current.Dispatcher.Invoke(() =>
                     {
-                        canvas.Children.Remove(t.Shape);
-                    });
+                        canvas.Children.Remove(t.Shape); Not removing from canvas to see if issue still continues.
+                    });*/
                 }
                 thingsToRem.Clear();
             }
@@ -214,7 +214,7 @@ namespace PredPreySim
     }
     public class Prey : Thing
     {
-        int spawnCooldown;
+        //int spawnCooldown;
         public Prey(double newSize, double newX, double newY) : base(newSize, newX, newY)
         {
             brush.Color = Colors.Blue;
@@ -278,10 +278,10 @@ namespace PredPreySim
                 return new double[3] { double.MaxValue, 0, 0 }; //Some sort of inexplicable error has ooccured so Im returning max magnitude.
             }
         }
-        public int GetCooldown()
+        /*public int GetCooldown()
         {
             return spawnCooldown;
-        }
+        }*/
         public void SetSpawnCooldown()
         {
 
